@@ -1,0 +1,14 @@
+# 절대 push하지 않을 파일들
+.env
+*.key
+*credentials*
+*secret*
+*token*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 구 프로토타입 (index.html로 통합됨, 참고용 보관)
+# quiz_prototype.html
+# result_ladder_prototype.html

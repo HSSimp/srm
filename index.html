@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관계예측 검사 — SRM</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Gothic+A1:wght@300;400;500;700&display=swap');
+
+  :root{
+    --bg:#10100f; --ink:#f4f1ea; --muted:#8a877e; --faint:#3a3833;
+    --accent:#e8a04a; --accent-soft:#3a2f1c; --line:#26241f; --card:#181714;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:'Gothic A1',sans-serif;
+    display:flex; justify-content:center;
+    background-image:radial-gradient(circle at 50% 0%, #1a1812 0%, #10100f 60%);
+  }
+
+  .app{
+    width:100%; max-width:440px; min-height:100vh;
+    padding:0 28px 60px; position:relative; display:flex; flex-direction:column;
+  }
+
+  /* progress line */
+  .progress-line{
+    position:fixed; top:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:440px; height:1.5px;
+    background:var(--accent); transform-origin:left;
+    transition:width .5s cubic-bezier(.4,0,.2,1); opacity:.7; z-index:10;
+  }
+
+  /* quiz dots */
+  .dots{
+    display:flex; gap:7px; justify-content:center; align-items:center;
+    padding:44px 0 0; min-height:68px;
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--faint);transition:all .4s ease;}
+  .dot.done{background:var(--muted);}
+  .dot.current{background:var(--accent);transform:scale(1.6);box-shadow:0 0 12px var(--accent-soft);}
+
+  /* screens */
+  #screen{flex:1;}
+
+  /* start */
+  .start{display:flex;flex-direction:column;justify-content:center;min-height:100vh;padding-top:0;}
+  .eyebrow{color:var(--accent);font-size:13px;letter-spacing:.18em;font-weight:500;margin-bottom:22px;text-transform:uppercase;}
+  .start h1{font-family:'Gowun Dodum',serif;font-size:30px;line-height:1.5;font-weight:400;margin-bottom:18px;}
+  .start .promise{color:var(--muted);font-size:15px;line-height:1.7;margin-bottom:44px;}
+  .start .promise b{color:var(--ink);font-weight:500;}
+
+  /* quiz */
+  .q-wrap{display:flex;flex-direction:column;justify-content:center;min-height:100vh;padding-top:0;}
+  .chunk-label{color:var(--accent);font-size:12px;letter-spacing:.1em;margin-bottom:16px;font-weight:500;opacity:0;transition:opacity .4s;min-height:18px;}
+  .chunk-label.show{opacity:.8;}
+  .q-text{font-family:'Gowun Dodum',serif;font-size:25px;line-height:1.55;min-height:110px;font-weight:400;}
+  .scale{display:flex;flex-direction:column;gap:9px;margin-top:30px;}
+  .opt{
+    background:var(--card);border:1px solid var(--line);color:var(--ink);
+    padding:15px 18px;border-radius:12px;font-size:15px;text-align:left;
+    cursor:pointer;font-family:'Gothic A1';display:flex;align-items:center;gap:14px;
+    transition:all .18s ease;
+  }
+  .opt:hover{border-color:var(--muted);}
+  .opt.sel{background:var(--accent-soft);border-color:var(--accent);}
+  .opt .pip{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted);flex-shrink:0;transition:all .18s;}
+  .opt.sel .pip{background:var(--accent);border-color:var(--accent);}
+  .back{margin-top:22px;text-align:center;}
+  .back button{background:none;border:none;color:var(--faint);font-size:13px;cursor:pointer;font-family:'Gothic A1';transition:color .2s;}
+  .back button:hover{color:var(--muted);}
+
+  /* result */
+  .result-wrap{padding-top:44px;}
+  .stage-tag{color:var(--accent);font-size:12px;letter-spacing:.18em;font-weight:500;margin-bottom:8px;text-transform:uppercase;}
+  .ladder-dots{display:flex;gap:6px;margin-bottom:30px;}
+  .ld{height:3px;flex:1;border-radius:2px;background:var(--faint);transition:background .5s;}
+  .ld.on{background:var(--accent);}
+  .result-wrap h2{font-family:'Gowun Dodum',serif;font-size:24px;font-weight:400;line-height:1.5;margin-bottom:26px;}
+
+  /* cards */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:22px 22px 24px;margin-bottom:14px;position:relative;
+  }
+  .card .lead{font-family:'Gowun Dodum',serif;font-size:17px;line-height:1.6;margin-bottom:10px;}
+  .card .shadow-line{color:var(--muted);font-size:14px;line-height:1.65;}
+  .card .basis{color:var(--faint);font-size:12px;margin-top:14px;font-style:italic;}
+
+  /* blur card */
+  .card.blur .content{filter:blur(5px);opacity:.4;user-select:none;}
+  .card.blur .veil{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    justify-content:center;align-items:center;text-align:center;padding:20px;
+  }
+  .card.blur .veil .vtext{font-size:13.5px;color:var(--muted);line-height:1.6;}
+
+  /* hook */
+  .hook{
+    background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;
+    padding:18px 20px;margin:8px 0 22px;
+  }
+  .hook .ht{font-size:14.5px;line-height:1.6;color:var(--ink);}
+
+  /* buttons */
+  .btn{
+    background:var(--accent);color:#1a140a;border:none;
+    padding:17px;border-radius:14px;font-size:16px;font-weight:700;
+    font-family:'Gothic A1';cursor:pointer;width:100%;
+    transition:transform .15s ease, opacity .2s; margin-bottom:10px; display:block;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:transparent;color:var(--muted);font-weight:400;font-size:14px;padding:12px;border:1px solid var(--line);}
+
+  /* animations */
+  .anim-in{animation:fadeUp .45s cubic-bezier(.2,.7,.2,1);}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  .fading{opacity:0;transform:translateY(-10px);transition:all .2s ease;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="progress-line" id="pline" style="width:0"></div>
+  <div id="dots-area"></div>
+  <div id="screen"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DATA  (Mini-IPIP, Donnellan et al. 2006 — public domain)
+// ══════════════════════════════════════════════════════════════
+const SCALE = ["전혀 아니다","아니다","보통","그렇다","매우 그렇다"];
+const CHUNK_LABEL = ["","조금 더 들어가 볼게요","거의 절반 왔어요","이제 마무리예요"];
+
+const CORE = [
+  {id:"C1", t:"사람들 사이에서 자연스럽게 분위기를 만드는 편이다", dim:"E", rev:false, chunk:0},
+  {id:"C2", t:"모임에서 눈에 띄지 않고 뒤에 있는 편이다",             dim:"E", rev:true,  chunk:0},
+  {id:"C3", t:"상대의 감정이 느껴지면 같이 마음이 움직인다",           dim:"A", rev:false, chunk:0},
+  {id:"C4", t:"다른 사람의 일에 별로 관심이 생기지 않는다",            dim:"A", rev:true,  chunk:1},
+  {id:"C5", t:"해야 할 일은 미루지 않고 바로 처리하는 편이다",         dim:"C", rev:false, chunk:1},
+  {id:"C6", t:"하다 보면 주변이 어질러져 있을 때가 많다",              dim:"C", rev:true,  chunk:1},
+  {id:"C7", t:"사소한 일에도 감정이 쉽게 흔들린다",                    dim:"N", rev:false, chunk:2},
+  {id:"C8", t:"대체로 마음이 차분하고 안정된 편이다",                  dim:"N", rev:true,  chunk:2},
+  {id:"C9", t:"상상하거나 새로운 걸 생각해 내는 걸 즐긴다",            dim:"O", rev:false, chunk:2},
+  {id:"C10",t:"추상적인 개념이나 아이디어엔 별로 끌리지 않는다",        dim:"O", rev:true,  chunk:3},
+];
+
+const ADAPTIVE = {
+  E:[
+    {id:"AE1",t:"대화할 때 말수가 많지 않은 편이다",                    dim:"E", rev:true,  chunk:0},
+    {id:"AE2",t:"처음 보는 사람들과도 금방 이야기를 트는 편이다",        dim:"E", rev:false, chunk:0},
+  ],
+  A:[
+    {id:"AA1",t:"남의 고민 얘기를 들어도 별로 감흥이 없다",             dim:"A", rev:true,  chunk:0},
+    {id:"AA2",t:"옆 사람이 힘들면 나도 괜히 무거워진다",                dim:"A", rev:false, chunk:0},
+  ],
+  C:[
+    {id:"AC1",t:"물건을 쓰고 나서 제자리에 두지 않을 때가 많다",        dim:"C", rev:true,  chunk:0},
+    {id:"AC2",t:"공간이나 일정이 정리되어 있어야 마음이 편하다",         dim:"C", rev:false, chunk:0},
+  ],
+  N:[
+    {id:"AN1",t:"기분이 오르내리는 편이다",                             dim:"N", rev:false, chunk:0},
+    {id:"AN2",t:"우울하거나 축 처지는 느낌이 거의 없다",                dim:"N", rev:true,  chunk:0},
+  ],
+  O:[
+    {id:"AO1",t:"복잡한 개념을 이해하는 게 어렵게 느껴진다",            dim:"O", rev:true,  chunk:0},
+    {id:"AO2",t:"상상력이 풍부한 편은 아니라고 생각한다",               dim:"O", rev:true,  chunk:0},
+  ],
+};
+
+const H_ITEMS = [
+  {id:"H1",t:"유리하더라도 빈말이나 아첨으로 상황을 풀려 하지 않는다",  dim:"H", rev:false, chunk:0},
+  {id:"H2",t:"나는 보통 사람보다 더 대우받아야 한다고 느낄 때가 있다",  dim:"H", rev:true,  chunk:0},
+  {id:"H3",t:"들키지 않는다면 규칙을 어길 수도 있다고 느낄 때가 있다",  dim:"H", rev:true,  chunk:0},
+];
+
+// ══════════════════════════════════════════════════════════════
+// COPY BANK  (D8 — 구체+양면+응답근거, Barnum 금지)
+// ══════════════════════════════════════════════════════════════
+const COPY = {
+  E:{
+    high:{
+      lead:"사람들 사이에 있을 때 에너지가 올라오는 쪽이에요.",
+      shadow:"혼자 있는 시간이 부족하면 모르는 새 지칠 수 있어요. 상대방에겐 '왜 항상 밖으로 돌까?' 느껴질 수 있어요.",
+      basis:"에너지 방향 관련 응답에서"
+    },
+    low:{
+      lead:"혼자 있는 시간이 진짜 충전이 되는 쪽이에요.",
+      shadow:"처음엔 거리감이 있어 보일 수 있어요. 그건 무관심이 아니라 에너지를 아끼는 방식이에요.",
+      basis:"에너지 방향 관련 응답에서"
+    },
+  },
+  A:{
+    high:{
+      lead:"주변 사람의 감정을 자연스럽게 알아채는 편이에요.",
+      shadow:"공감이 강한 만큼, 상대의 감정에 내가 먼저 지칠 수 있어요. '내 감정은 어디에?'가 생길 수 있어요.",
+      basis:"공감·관심 관련 응답에서"
+    },
+    low:{
+      lead:"감정보다 사실과 논리를 먼저 보는 쪽이에요.",
+      shadow:"상대가 위로를 원할 때 해결책부터 꺼내면 어긋날 수 있어요. 그게 차갑게 느껴질 수 있어요.",
+      basis:"공감·관심 관련 응답에서"
+    },
+  },
+  C:{
+    high:{
+      lead:"한 번 정하면 끝까지 가는 쪽이에요. 믿음직하다는 말 자주 들어요.",
+      shadow:"상대가 즉흥적일 때 답답하게 느껴질 수 있어요. '왜 계획대로 안 해?'가 갈등 포인트가 될 수 있어요.",
+      basis:"계획·실행 관련 응답에서"
+    },
+    low:{
+      lead:"흐름에 따라 움직이는 걸 즐기는 편이에요. 유연하고 여유 있어요.",
+      shadow:"책임이 쌓일 때 처리 속도가 상대 기대에 못 미칠 수 있어요. 장기 관계에선 신뢰 이슈로 번질 수 있어요.",
+      basis:"계획·실행 관련 응답에서"
+    },
+  },
+  N:{
+    high:{
+      lead:"감정이 풍부하고 작은 신호도 잘 포착해요.",
+      shadow:"그만큼 상처도 빨리, 오래 가요. 상대는 '무엇이 잘못됐지?' 헤매는 시간이 생길 수 있어요.",
+      basis:"감정 반응 관련 응답에서"
+    },
+    low:{
+      lead:"웬만한 일엔 흔들리지 않아요. 상대 입장에선 안정감 있어요.",
+      shadow:"너무 안 흔들리면 상대가 '나만 예민한 건가?' 느낄 수 있어요.",
+      basis:"감정 반응 관련 응답에서"
+    },
+  },
+  O:{
+    high:{
+      lead:"새로운 걸 먼저 해보려는 쪽이에요. 대화에서 아이디어가 많이 나와요.",
+      shadow:"변화와 자극을 즐기는 만큼, 루틴에서 지루함을 빨리 느낄 수 있어요.",
+      basis:"새로움·상상 관련 응답에서"
+    },
+    low:{
+      lead:"익숙한 것에서 안정을 찾는 편이에요. 신뢰감이 쌓이는 속도가 달라요.",
+      shadow:"상대가 새로운 걸 제안할 때 부담이 먼저 올 수 있어요.",
+      basis:"새로움·상상 관련 응답에서"
+    },
+  },
+};
+
+const REL_CONFLICT = {
+  h_h:"갈등이 생겨도 바로 정리하고 넘어가는 쪽이에요. 상대 감정을 챙기면서 해결하는 게 자연스러워요.",
+  h_l:"빨리 정리하고 싶은데, 방식이 직접적이라 상대가 공격받는 느낌을 받을 수 있어요.",
+  l_h:"갈등 상황에서 상대 감정을 먼저 챙기느라 정작 문제 해결이 늦어질 수 있어요.",
+  l_l:"갈등을 일단 넘기는 쪽이에요. 상대가 답답해할 수 있어요.",
+};
+const REL_RHYTHM = {
+  h_h:"계획을 세우지만 새로운 것도 반기는 편이에요. 균형 있어요.",
+  h_l:"루틴이 편한 쪽이에요. 상대가 갑자기 계획을 바꾸면 불편할 수 있어요.",
+  l_h:"즉흥과 새로움을 즐겨요. 장기 약속이나 책임이 필요할 때 갭이 생길 수 있어요.",
+  l_l:"큰 변화 없이 익숙한 흐름을 선호해요. 안정적인 관계에서 편안한 쪽이에요.",
+};
+
+const DIM_LABEL = {E:"에너지 방향", A:"공감 방식", C:"실행 스타일", N:"감정 반응", O:"새로움 태도"};
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let answers = {};
+let currentItems = [];
+let currentIdx = 0;
+let appStage = 'start';
+let blurDim = null;
+let dim2 = null;
+let scores = {};
+
+// ══════════════════════════════════════════════════════════════
+// SCORING
+// ══════════════════════════════════════════════════════════════
+function allItemsFlat() {
+  return [...CORE, ...Object.values(ADAPTIVE).flat(), ...H_ITEMS];
+}
+
+function computeScores() {
+  const acc = {E:[],A:[],C:[],N:[],O:[],H:[]};
+  for (const [id, val] of Object.entries(answers)) {
+    const item = allItemsFlat().find(it => it.id === id);
+    if (!item) continue;
+    const s = item.rev ? (6 - val) : val;
+    if (acc[item.dim]) acc[item.dim].push(s);
+  }
+  const out = {};
+  for (const [d, vals] of Object.entries(acc)) {
+    out[d] = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+  return out;
+}
+
+function level(score) {
+  if (score === null || score === undefined) return 'u';
+  if (score >= 3.5) return 'h';
+  if (score <= 2.5) return 'l';
+  return 'm';
+}
+
+function getCopy(dim, score) {
+  const lv = level(score);
+  const d = COPY[dim];
+  if (!d) return null;
+  if (lv === 'h') return d.high;
+  if (lv === 'l') return d.low;
+  return null;
+}
+
+function sortByAmbiguity(sc) {
+  return ['E','A','C','N','O']
+    .filter(d => sc[d] !== null)
+    .sort((a,b) => Math.abs(sc[a]-3) - Math.abs(sc[b]-3));
+}
+
+function selectTopTwo(sc) {
+  const byClarity = ['E','A','C','N','O']
+    .filter(d => sc[d] !== null)
+    .sort((a,b) => Math.abs(sc[b]-3) - Math.abs(sc[a]-3));
+  return byClarity.slice(0, 2);
+}
+
+// ══════════════════════════════════════════════════════════════
+// HTML HELPERS
+// ══════════════════════════════════════════════════════════════
+function cardHtml(c) {
+  return `<div class="card">
+    <div class="lead">${c.lead}</div>
+    <div class="shadow-line">${c.shadow}</div>
+    <div class="basis">— ${c.basis}</div>
+  </div>`;
+}
+
+function midCardHtml(dim) {
+  return `<div class="card">
+    <div class="lead">이 부분은 두 방향이 모두 보여요.</div>
+    <div class="shadow-line">상황에 따라 달라지는 쪽이에요. 문항을 더 보면 더 또렷해져요.</div>
+    <div class="basis">— ${DIM_LABEL[dim]||dim} 관련 응답에서</div>
+  </div>`;
+}
+
+function blurCardHtml(dim) {
+  return `<div class="card blur" id="blurCard">
+    <div class="content">
+      <div class="lead">당신의 ${DIM_LABEL[dim]||dim}은 ___________</div>
+      <div class="shadow-line">________________________________</div>
+    </div>
+    <div class="veil"><div class="vtext">이 부분은 아직 잘 안 보여요.<br>섣불리 말하지 않을게요.</div></div>
+  </div>`;
+}
+
+function ladderHtml(n) {
+  return '<div class="ladder-dots">' +
+    [1,2,3].map(i=>`<span class="ld ${i<=n?'on':''}"></span>`).join('') +
+  '</div>';
+}
+
+// ══════════════════════════════════════════════════════════════
+// UI
+// ══════════════════════════════════════════════════════════════
+const pline  = document.getElementById('pline');
+const dotsEl = document.getElementById('dots-area');
+const screen = document.getElementById('screen');
+
+function setProgress(done, total) {
+  pline.style.width = (total > 0 ? done/total*100 : 0) + '%';
+}
+
+function renderDots(done, total) {
+  if (!total) { dotsEl.innerHTML = ''; return; }
+  dotsEl.innerHTML = '<div class="dots">' +
+    Array.from({length:total}, (_,i) => {
+      let c = 'dot';
+      if (i < done) c += ' done';
+      else if (i === done) c += ' current';
+      return `<span class="${c}"></span>`;
+    }).join('') + '</div>';
+}
+
+// ── START ────────────────────────────────────────────────────
+function showStart() {
+  appStage = 'start';
+  setProgress(0, 0); dotsEl.innerHTML = '';
+  screen.innerHTML = `
+    <div class="start anim-in">
+      <div class="eyebrow">관계 예측</div>
+      <h1>두 사람이 어떻게<br>맞물릴지 알려드려요.</h1>
+      <p class="promise"><b>1분이면 충분해요.</b> 짧은 질문 <b>10개</b>,<br>고민 말고 느낌대로 답하면 됩니다.</p>
+      <button class="btn" onclick="startQuiz()">시작하기</button>
+      <button class="btn ghost" onclick="showInfo()">어떻게 작동하나요?</button>
+    </div>`;
+}
+
+function showInfo() {
+  screen.innerHTML = `
+    <div class="start anim-in">
+      <div class="eyebrow">작동 방식</div>
+      <h1>유형명은<br>알려드리지 않아요.</h1>
+      <p class="promise">심리학적으로 검증된 Big Five 측정을 기반으로,<br>두 사람의 관계가 어떻게 흐를지만 알려드려요.<br><br><b>"ENTJ라서" "전갈자리라서"</b> 같은 선입견 없이,<br>실제 응답에 근거한 서술만 드려요.</p>
+      <button class="btn" onclick="startQuiz()">시작하기</button>
+      <button class="btn ghost" onclick="showStart()">← 뒤로</button>
+    </div>`;
+}
+
+// ── QUIZ ────────────────────────────────────────────────────
+function startQuiz() {
+  answers = {}; currentItems = CORE; currentIdx = 0; appStage = 'quiz';
+  showItem();
+}
+
+function showItem() {
+  const it = currentItems[currentIdx];
+  const total = currentItems.length;
+  const prevChunk = currentIdx > 0 ? (currentItems[currentIdx-1].chunk ?? 0) : -1;
+  const newChunk = (it.chunk != null && it.chunk !== prevChunk && it.chunk > 0);
+  const sel = answers[it.id];
+
+  renderDots(currentIdx, total);
+  setProgress(currentIdx, total);
+
+  screen.innerHTML = `
+    <div class="q-wrap anim-in">
+      <div class="chunk-label ${newChunk ? 'show' : ''}">${newChunk && it.chunk < CHUNK_LABEL.length ? CHUNK_LABEL[it.chunk] : ''}</div>
+      <div class="q-text">${it.t}</div>
+      <div class="scale">
+        ${SCALE.map((s,i) => `
+          <button class="opt ${sel === i+1 ? 'sel' : ''}" onclick="answer(${i+1})">
+            <span class="pip"></span>${s}
+          </button>`).join('')}
+      </div>
+      <div class="back">${currentIdx > 0 ? '<button onclick="goBack()">← 이전</button>' : ''}</div>
+    </div>`;
+}
+
+function answer(v) {
+  const id = currentItems[currentIdx].id;
+  answers[id] = v;
+  // visual feedback
+  document.querySelectorAll('.opt').forEach((o,i) => {
+    o.classList.toggle('sel', i === v-1);
+    o.querySelector('.pip').style.background = i === v-1 ? 'var(--accent)' : '';
+  });
+  setTimeout(() => {
+    const qw = document.querySelector('.q-wrap');
+    if (qw) qw.classList.add('fading');
+    setTimeout(() => {
+      currentIdx++;
+      if (currentIdx >= currentItems.length) onPhaseComplete();
+      else showItem();
+    }, 200);
+  }, 260);
+}
+
+function goBack() {
+  if (currentIdx > 0) { currentIdx--; showItem(); }
+}
+
+function onPhaseComplete() {
+  scores = computeScores();
+  if (appStage === 'quiz') {
+    const sorted = sortByAmbiguity(scores);
+    blurDim = sorted[0];
+    dim2 = sorted[1] || null;
+    showS1();
+  } else if (appStage === 'adaptive') {
+    showS2();
+  } else if (appStage === 'deep') {
+    showS3();
+  }
+}
+
+// ── S1: 첫 거울 ────────────────────────────────────────────
+function showS1() {
+  appStage = 's1';
+  setProgress(0,0); dotsEl.innerHTML = '';
+
+  const top2 = selectTopTwo(scores);
+  const cardsHtml = top2.map(d => {
+    const c = getCopy(d, scores[d]);
+    return c ? cardHtml(c) : midCardHtml(d);
+  }).join('');
+
+  screen.innerHTML = `
+    <div class="result-wrap anim-in">
+      <div class="stage-tag">첫 거울</div>
+      ${ladderHtml(1)}
+      <h2>몇 가지가 또렷하게<br>보이기 시작했어요.</h2>
+      ${cardsHtml}
+      ${blurCardHtml(blurDim)}
+      <div class="hook"><div class="ht">3개만 더 답하면 흐릿한 부분이 또렷해져요. 관계를 보기 전에 채워볼까요?</div></div>
+      <button class="btn" onclick="startAdaptive()">더 또렷하게 보기 · 3문항</button>
+      <button class="btn ghost" onclick="goToMatch()">지금 관계 보러 가기</button>
+    </div>`;
+}
+
+// ── ADAPTIVE QUIZ (3문항) ────────────────────────────────────
+function startAdaptive() {
+  appStage = 'adaptive';
+  const pool = (ADAPTIVE[blurDim] || []).slice(0, 2);
+  currentItems = [...pool, H_ITEMS[0]].map(it => ({...it, chunk:0}));
+  currentIdx = 0;
+  showItem();
+}
+
+// ── S2: 또렷하게 ─────────────────────────────────────────────
+function showS2() {
+  appStage = 's2';
+  setProgress(0,0); dotsEl.innerHTML = '';
+
+  const top2 = selectTopTwo(scores);
+  const cardsHtml = top2.map(d => {
+    const c = getCopy(d, scores[d]);
+    return c ? cardHtml(c) : midCardHtml(d);
+  }).join('');
+
+  const blurCopy = getCopy(blurDim, scores[blurDim]);
+  const clearedHtml = blurCopy ? cardHtml(blurCopy) : midCardHtml(blurDim);
+
+  screen.innerHTML = `
+    <div class="result-wrap anim-in">
+      <div class="stage-tag">또렷하게</div>
+      ${ladderHtml(2)}
+      <h2>흐릿했던 부분이<br>채워졌어요.</h2>
+      ${cardsHtml}
+      ${clearedHtml}
+      <div class="hook"><div class="ht">관계를 보기엔 이 정도면 충분해요. 더 깊은 결까지 볼까요?</div></div>
+      <button class="btn" onclick="startDeep()">깊은 결까지 · 5문항</button>
+      <button class="btn ghost" onclick="goToMatch()">관계 보러 가기</button>
+    </div>`;
+}
+
+// ── DEEP QUIZ (5문항) ────────────────────────────────────────
+function startDeep() {
+  appStage = 'deep';
+  const dim2Items = dim2 ? (ADAPTIVE[dim2] || []) : [];
+  const dims = ['E','A','C','N','O'].filter(d => d !== blurDim && d !== dim2);
+  const extra = dims.length ? (ADAPTIVE[dims[0]] || []).slice(0,1) : [];
+  currentItems = [...H_ITEMS.slice(1), ...dim2Items, ...extra]
+    .slice(0,5)
+    .map(it => ({...it, chunk:0}));
+  currentIdx = 0;
+  showItem();
+}
+
+// ── S3: 깊은 결 ───────────────────────────────────────────────
+function showS3() {
+  appStage = 's3';
+  setProgress(0,0); dotsEl.innerHTML = '';
+
+  const clv = level(scores.C) === 'm' ? 'l' : level(scores.C);
+  const alv = level(scores.A) === 'm' ? 'l' : level(scores.A);
+  const olv = level(scores.O) === 'm' ? 'l' : level(scores.O);
+
+  const conflictText = REL_CONFLICT[`${clv}_${alv}`] || "갈등 방식은 상황에 따라 달라지는 쪽이에요.";
+  const rhythmText   = REL_RHYTHM[`${clv}_${olv}`]   || "생활 리듬은 상황에 따라 달라지는 쪽이에요.";
+
+  screen.innerHTML = `
+    <div class="result-wrap anim-in">
+      <div class="stage-tag">깊은 결</div>
+      ${ladderHtml(3)}
+      <h2>관계에서 가장 중요한<br>신호까지 봤어요.</h2>
+      <div class="card">
+        <div class="lead">갈등 방식</div>
+        <div class="shadow-line">${conflictText}</div>
+        <div class="basis">— 계획·공감 관련 응답에서</div>
+      </div>
+      <div class="card">
+        <div class="lead">생활 리듬</div>
+        <div class="shadow-line">${rhythmText}</div>
+        <div class="basis">— 실행·새로움 관련 응답에서</div>
+      </div>
+      <div class="hook"><div class="ht">여기까지 답한 건 모두 18문항. 이제 누구와의 관계든 꽤 정확하게 비춰볼 수 있어요.</div></div>
+      <button class="btn" onclick="goToMatch()">관계 매칭 시작하기</button>
+      <button class="btn ghost" onclick="showStart()">처음부터 다시</button>
+    </div>`;
+}
+
+// ── MATCH CTA (데모) ─────────────────────────────────────────
+function goToMatch() {
+  setProgress(0,0); dotsEl.innerHTML = '';
+  screen.innerHTML = `
+    <div class="start anim-in">
+      <div class="eyebrow">관계 매칭</div>
+      <h1>상대방의 이름을<br>입력해주세요.</h1>
+      <p class="promise">상대방도 검사를 마치면<br>두 사람의 관계가 어떻게 흐를지 알려드려요.<br><br><b>상대의 유형명은 끝까지 공개되지 않아요.</b></p>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:24px;">
+        <div style="color:var(--faint);font-size:12px;margin-bottom:8px;">데모 버전 — 실제 매칭 기능은 준비 중이에요.</div>
+        <div style="color:var(--muted);font-size:14px;line-height:1.6;">P6 캘리브레이션 후 실제 매칭 엔진이 연결됩니다.</div>
+      </div>
+      <button class="btn" onclick="showStart()">처음으로 돌아가기</button>
+    </div>`;
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+showStart();
+</script>
+</body>
+</html>
