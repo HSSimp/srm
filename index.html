@@ -186,7 +186,7 @@
   }
   .mbti-card:hover{border-color:var(--accent);transform:translateY(-2px);}
   .mbti-card.sel{border-color:var(--accent);background:var(--accent-pale);}
-  .mbti-card .code{font-family:'Hahmlet',serif;font-size:28px;font-weight:600;color:var(--accent);letter-spacing:.08em;margin-bottom:8px;}
+  .mbti-card .code{font-family:'Hahmlet',serif;font-size:22px;font-weight:600;color:var(--accent);letter-spacing:.02em;margin-bottom:8px;}
   .mbti-card .nick{font-family:'Hahmlet',serif;font-size:14.5px;font-weight:500;color:var(--ink);margin-bottom:10px;}
   .mbti-card .desc{font-size:12.5px;color:var(--muted);line-height:1.55;}
 
@@ -340,34 +340,45 @@ const REL_RHYTHM = {
 
 const DIM_LABEL = {E:"에너지 방향", A:"공감 방식", C:"실행 스타일", N:"감정 결", O:"새로움 태도", H:"정직·태도"};
 
-const MBTI = [
-  {code:"INTJ", nick:"전략가",     desc:"멀리 보고 조용히 움직여요"},
-  {code:"INTP", nick:"논리가",     desc:"머릿속에서 늘 가설을 굴려요"},
-  {code:"ENTJ", nick:"지휘관",     desc:"목표를 향해 사람을 이끌어요"},
-  {code:"ENTP", nick:"변론가",     desc:"가능성을 즐기고 토론을 좋아해요"},
-  {code:"INFJ", nick:"옹호자",     desc:"속이 깊고 통찰력 있어요"},
-  {code:"INFP", nick:"중재자",     desc:"진심과 가치를 따라가요"},
-  {code:"ENFJ", nick:"선도자",     desc:"사람을 따뜻하게 끌어모아요"},
-  {code:"ENFP", nick:"활동가",     desc:"감정과 영감의 폭이 넓어요"},
-  {code:"ISTJ", nick:"현실주의자", desc:"맡은 일을 흔들림 없이 해내요"},
-  {code:"ISFJ", nick:"수호자",     desc:"조용히 주변을 챙기는 사람이에요"},
-  {code:"ESTJ", nick:"경영자",     desc:"질서와 효율을 만들어내요"},
-  {code:"ESFJ", nick:"집정관",     desc:"사람과 관계를 잘 살펴요"},
-  {code:"ISTP", nick:"장인",       desc:"조용하지만 손이 빨라요"},
-  {code:"ISFP", nick:"모험가",     desc:"섬세하고 자기 결을 따라가요"},
-  {code:"ESTP", nick:"사업가",     desc:"지금 이 순간에 강한 사람이에요"},
-  {code:"ESFP", nick:"연예인",     desc:"분위기를 환하게 만들어요"},
+// SRM 독자 결 유형 — Big Five 조합 기반 12유형 (MBTI 무관)
+const SRM_TYPES = [
+  {id:"anchor",   name:"닻형",     trait:"곁에 있으면 안심이 돼요",
+   desc:"조용하고 신뢰감 있어요. 흔들릴 때 버텨줘요",
+   big5:{E:2.0, O:2.5, C:4.2, A:3.8, N:2.2, H:3.8}},
+  {id:"classic",  name:"정석형",   trait:"약속은 무조건 지키는 사람이에요",
+   desc:"원칙과 책임감이 일관되게 느껴져요",
+   big5:{E:2.5, O:2.0, C:4.5, A:3.0, N:2.0, H:4.2}},
+  {id:"map",      name:"지도형",   trait:"체계적이면서도 새 길을 찾아요",
+   desc:"계획성과 창의성을 동시에 가지고 있어요",
+   big5:{E:2.0, O:4.2, C:4.2, A:3.0, N:2.5, H:3.5}},
+  {id:"flow",     name:"흐름형",   trait:"상황에 맡기는 게 자연스러워요",
+   desc:"유연하고 새로운 것에 열려 있어요",
+   big5:{E:2.0, O:4.2, C:2.5, A:3.0, N:3.0, H:3.0}},
+  {id:"depth",    name:"그늘형",   trait:"감수성이 깊고 내면이 풍부해요",
+   desc:"작은 것도 섬세하게 느끼는 편이에요",
+   big5:{E:2.0, O:3.8, C:3.0, A:3.8, N:4.2, H:3.5}},
+  {id:"warmth",   name:"온기형",   trait:"말없이 조용히 챙기는 사람이에요",
+   desc:"따뜻함이 행동으로 전해져요",
+   big5:{E:2.2, O:3.0, C:3.2, A:4.2, N:3.0, H:4.0}},
+  {id:"mountain", name:"산형",     trait:"웬만한 일에 흔들리지 않아요",
+   desc:"안정감과 묵직함이 느껴지는 사람이에요",
+   big5:{E:2.2, O:2.2, C:4.0, A:3.0, N:1.8, H:3.5}},
+  {id:"compass",  name:"나침반형", trait:"방향을 잡고 주도적으로 움직여요",
+   desc:"목표가 있고 논리적으로 이끌어요",
+   big5:{E:4.2, O:3.0, C:4.2, A:2.5, N:2.0, H:3.5}},
+  {id:"explorer", name:"탐험형",   trait:"새로운 게 있으면 먼저 달려들어요",
+   desc:"에너지와 호기심이 넘쳐요",
+   big5:{E:4.2, O:4.2, C:2.5, A:3.0, N:2.5, H:3.0}},
+  {id:"flame",    name:"불꽃형",   trait:"즉흥적이고 에너지가 먼저 오는 사람",
+   desc:"분위기를 확 바꿔놓을 수 있어요",
+   big5:{E:4.5, O:4.0, C:2.0, A:3.2, N:3.5, H:3.0}},
+  {id:"wave",     name:"파도형",   trait:"감정과 관계에 에너지를 쏟는 사람",
+   desc:"풍부한 감정으로 주변을 물들여요",
+   big5:{E:4.0, O:3.8, C:2.5, A:4.2, N:3.8, H:3.2}},
+  {id:"mirror",   name:"거울형",   trait:"상대 마음을 잘 읽는 사람",
+   desc:"분위기 파악이 빠르고 맞춰주는 게 자연스러워요",
+   big5:{E:3.8, O:3.2, C:3.0, A:4.2, N:2.5, H:3.5}},
 ];
-function mbtiToBig5(code){
-  const c = code.toUpperCase();
-  return {
-    E: c[0]==='E' ? 4.0 : 2.0,
-    O: c[1]==='N' ? 4.0 : 2.5,
-    A: c[2]==='F' ? 3.8 : 2.8,
-    C: c[3]==='J' ? 4.0 : 2.5,
-    N: 3.0, H: 3.0,
-  };
-}
 
 // ══════════════════════════════════════════════════════════════
 // STATE
@@ -584,38 +595,39 @@ function showS2(){
 function goToMatch(){
   appStage='match';
   setProg(0,0); dotsEl.innerHTML='';
-  const cards = MBTI.map(m=>`
-    <div class="mbti-card" onclick="pickMBTI('${m.code}')">
-      <div class="code">${m.code}</div>
-      <div class="nick">${m.nick}</div>
-      <div class="desc">${m.desc}</div>
+  const cards = SRM_TYPES.map(t=>`
+    <div class="mbti-card" data-id="${t.id}" onclick="pickType('${t.id}')">
+      <div class="code">${t.name}</div>
+      <div class="nick">${t.trait}</div>
+      <div class="desc">${t.desc}</div>
     </div>`).join('');
 
   screen.innerHTML = `
     <div class="match-intro anim-in">
       <div class="eyebrow">관계 매칭</div>
-      <h2>상대방의 타입을<br>골라주세요.</h2>
-      <p class="sub">상대를 어떻게 보고 있는지가 기준이면 충분해요.<br>오른쪽으로 밀어서 더 많은 타입을 볼 수 있어요.</p>
+      <h2>상대방은 어떤<br>결인가요?</h2>
+      <p class="sub">가장 비슷한 결을 골라주세요.<br>오른쪽으로 밀어서 더 볼 수 있어요.</p>
     </div>
     <div class="mbti-deck" id="deck">${cards}</div>
     <div class="deck-hint">← 좌우로 밀어보세요 →</div>
     <div class="dont-know">
-      <div class="dk-q">상대의 타입을 모르시나요?</div>
+      <div class="dk-q">상대방의 결을 잘 모르시나요?</div>
       <div class="dk-help">상대방에게 검사 링크를 보내면, 본인의 결과를 받아볼 수 있어요. 상대는 본인 유형명을 모르는 채로 답해도 됩니다.</div>
       <button class="copy-btn" id="copyBtn" onclick="copyShareLink()">검사 링크 복사하기</button>
     </div>
     <div style="margin-top:20px"><button class="btn ghost" onclick="showStart()">처음으로</button></div>`;
 }
 
-function pickMBTI(code){
+function pickType(id){
   document.querySelectorAll('.mbti-card').forEach(el=>{
-    el.classList.toggle('sel', el.querySelector('.code').textContent===code);
+    el.classList.toggle('sel', el.dataset.id===id);
   });
-  setTimeout(()=>showMatchResult(code), 320);
+  setTimeout(()=>showMatchResult(id), 320);
 }
 
-function showMatchResult(code){
-  const partner = mbtiToBig5(code);
+function showMatchResult(id){
+  const type = SRM_TYPES.find(t=>t.id===id);
+  const partner = type.big5;
   const me = scores;
   const me_E = level(me.E), me_O = level(me.O), me_C = level(me.C);
   const me_A = level(me.A);
@@ -645,7 +657,7 @@ function showMatchResult(code){
     <div class="match-result anim-in">
       <div class="pair-glyph">
         나 × 상대
-        <div class="pair-codes">● — ${code}</div>
+        <div class="pair-codes">● — ${type.name}</div>
       </div>
       <div class="result-head" style="margin-bottom:20px">
         <div class="stage-tag">관계의 결</div>
@@ -668,7 +680,7 @@ function showMatchResult(code){
         <div class="shadow-line">${conflict}</div>
       </div>
       <div style="margin-top:20px">
-        <button class="btn ghost" onclick="goToMatch()">다른 타입으로 다시 보기</button>
+        <button class="btn ghost" onclick="goToMatch()">다른 결로 다시 보기</button>
         <button class="btn ghost" onclick="showStart()">처음으로</button>
       </div>
     </div>`;
